@@ -11,6 +11,6 @@ Implement txt file
     -text editing
     -change history cache
 Implement cftxt(custom format text file)
-    -underline,bold,italic,text colour,background colour. with custom file format
+    -underline,bold,italic,text colour,background colour. add custom file format
     -text editing
     -change history cache

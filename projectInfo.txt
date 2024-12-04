@@ -1,0 +1,6 @@
+each page will be its own struct that contains page_data.
+each page will have the page_core trait object attached to it that is used to call everything
+pages have a few basic functions
+draw
+initial_draw
+runtime

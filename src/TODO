@@ -1,0 +1,16 @@
+Finish file navigation
+    -press enter then process commands
+    -add commands like ls and cd(with cd accepting stuff like .. or new dir entirely)
+    -add simple commands like open
+    -treat that as done for now
+Implement commands
+    -when a user presses tab let them switch between normal mode and command mode.
+    -in command mode let them use commands like open to swap between open pages
+    -let them use commands like save or fileprop(to view and edit file properties)
+Implement txt file
+    -text editing
+    -change history cache
+Implement cftxt(custom format text file)
+    -underline,bold,italic,text colour,background colour
+    -text editing
+    -change history cache

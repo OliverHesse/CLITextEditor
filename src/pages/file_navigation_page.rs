@@ -98,24 +98,30 @@ impl PageCore for FileNavigation{
     }
 
     fn initial_draw(&mut self,app_data:AppData) ->AppAction{
-        
-        if let Ok(current_dir) = env::current_dir() {
-            // Get the root component (drive on Windows, / on Linux)
-            if let Some(root) = current_dir.components().next() {
-                if let Some(root_str) = root.as_os_str().to_str() {
-                    
-                    let len_u16: u16 = root_str.len().try_into().unwrap_or_else(|_| {
-                        panic!("String is too long to fit into a u16");
-        
-                    });
-                    self.current_column =len_u16+1+1;
-                    let path_str = root_str.to_string()+r"\";
-                    self.current_file_path.push(path_str);
-                    self.draw(app_data);
+        self.current_column = 0;
+        self.current_line = 0;
+        if self.current_file_path.as_os_str().is_empty(){
+            if let Ok(current_dir) = env::current_dir() {
+                // Get the root component (drive on Windows, / on Linux)
+                if let Some(root) = current_dir.components().next() {
+                    if let Some(root_str) = root.as_os_str().to_str() {
+                        
+                        let len_u16: u16 = root_str.len().try_into().unwrap_or_else(|_| {
+                            panic!("String is too long to fit into a u16");
+            
+                        });
+                        self.current_column =len_u16+2;
+                        let path_str = root_str.to_string()+r"\";
+                        self.current_file_path.push(path_str);
+                        self.draw(app_data);
+                    }
                 }
+            } else {
+                println!("Could not get the current directory");
             }
-        } else {
-            println!("Could not get the current directory");
+        }else{
+            self.current_column = self.path_len_u16() + 1;
+            self.draw(app_data);
         }
         AppAction::Nothing
         
@@ -264,19 +270,21 @@ impl PageCore for FileNavigation{
                                             let mut target_file = self.current_file_path.clone();
                                             target_file.push(components[i]);
                                             if target_file.exists() && target_file.is_file(){
+                                                self.draw_output(String::from(components[i])+" was loaded");
+                                                self.reset_cursor();
+                                                self.current_line += 1;
+                                                self.draw(app_data);
                                                 return AppAction::LoadPage(target_file);
                                             }else if target_file.is_dir() {
                                                 self.draw_output(String::from(target_file.to_str().unwrap().to_owned()+" is not a file"));
-                                                self.reset_cursor();
-                                                self.current_line += 1;
-                                                self.draw(app_data);
+                                            
                                             }else if target_file.exists() == false {
                                                 self.draw_output(String::from(target_file.to_str().unwrap().to_owned()+" does not exist"));
-                                                self.reset_cursor();
-                                                self.current_line += 1;
-                                                self.draw(app_data);
+                                          
                                             }
-
+                                            self.reset_cursor();
+                                            self.current_line += 1;
+                                            self.draw(app_data);
 
                                             break;
                                         }

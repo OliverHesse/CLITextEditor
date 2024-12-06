@@ -78,6 +78,11 @@ impl App{
             return Err::<(),AppError>(AppError::ActivePageOutOfRange);
         }   
         self.active_page = new_page;
+        let mut stdout = io::stdout();
+        stdout.execute(terminal::Clear(terminal::ClearType::All));
+        stdout.execute(terminal::Clear(terminal::ClearType::Purge));
+        stdout.execute(DisableLineWrap);
+        stdout.execute(SetBackgroundColor(Color::Black));
         Ok(())
    }
    pub fn initialize(&mut self){
@@ -173,13 +178,28 @@ impl App{
                                     match self.find_page_from_name("view_loaded".to_string()){
                                         Ok(i)=>{
                                             let _ =self.change_page(i);
-                                            self.pages[self.active_page].initial_draw(app_data);      
+                                            self.pages[self.active_page].initial_draw(app_data);   
+                                            self.current_column = 0;
+                                            self.input_buffer.clear();   
                                             return Ok(());                                 
                                         },
                                         Err(page_error)=>return Err(page_error),
                                     }
                                     
                                 },
+                                "nav"=>{
+                                    match self.find_page_from_name("navigation".to_string()){
+                                        Ok(i)=>{
+                                            let _ =self.change_page(i);
+                                            self.pages[self.active_page].initial_draw(app_data);  
+                                            self.current_column = 0;
+                                            self.input_buffer.clear();   
+                                            return Ok(());                                 
+                                        },
+                                        Err(page_error)=>return Err(page_error),
+                                    }
+                                    
+                                }
                                 _=>{self.pages[self.active_page].draw(app_data);},
                             }
                             

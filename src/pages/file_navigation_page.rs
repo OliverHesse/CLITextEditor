@@ -11,6 +11,9 @@ pub struct FileNavigation{
     pub current_input_buffer:String,
 }
 impl FileNavigation{
+    fn get_page_name(&self)->String{
+        return self.page_data.file_name.clone();
+    }
     fn path_len_u16(&self)->u16{
         let curr_dir = &self.current_file_path;
         let len_u16: u16 = curr_dir.to_str().unwrap().len().try_into().unwrap_or_else(|_| {
@@ -19,9 +22,9 @@ impl FileNavigation{
         });
         return len_u16
     }
-    fn draw_output(&self,output:String){
+    fn draw_output(&mut self,output:String){
         let mut stdout = io::stdout();
-
+        self.current_line += 1;
         if self.current_line >= terminal::size().unwrap().1-1{
             stdout.queue(terminal::ScrollUp(1));
         }
@@ -87,6 +90,9 @@ impl FileNavigation{
     }
 }
 impl PageCore for FileNavigation{
+    fn get_page_name(&self)->String {
+        return self.page_data.page_name.clone();
+    }
     fn get_page_data(&self)->Option<PageData> {
         return Some(self.page_data.clone());
     }
@@ -147,11 +153,6 @@ impl PageCore for FileNavigation{
             Event::Key(e)=>{
                 match e.code{
                     KeyCode::Left=>{
-                        let curr_dir = &self.current_file_path;
-                        let len_u16: u16 = curr_dir.to_str().unwrap().len().try_into().unwrap_or_else(|_| {
-                            panic!("String is too long to fit into a u16");
-                        
-                        });
                         if e.kind == KeyEventKind::Press && self.current_column > self.path_len_u16()+1{
                             self.current_column -= 1;
                             self.edit_input_buffer();
@@ -211,13 +212,13 @@ impl PageCore for FileNavigation{
                                             if temp_path.exists() && temp_path.is_dir(){
                                                 self.current_file_path.push(components[i]);
                                                 self.current_file_path = self.normalize_path(self.current_file_path.to_str().unwrap());
-                                                self.current_line += 1;
+                                                
                                                 self.draw_output(String::from(" "));
                                                 self.reset_cursor();
                                                 self.current_line += 1;
                                                 self.draw(app_data);
                                             }else{
-                                                self.current_line += 1;
+                                               
                                                 self.draw_output(String::from("folder ".to_owned()+temp_path.to_str().unwrap()+"  does not exist"));
                                                 self.reset_cursor();
                                                 self.current_line += 1;
@@ -232,7 +233,7 @@ impl PageCore for FileNavigation{
                                     let paths = fs::read_dir(self.current_file_path.as_path()).unwrap();
 
                                     for path in paths {
-                                        self.current_line+=1;
+                                        
                                         let full_path = path.unwrap().path();
 
                                     
@@ -250,13 +251,37 @@ impl PageCore for FileNavigation{
                                 "cd.."=>{
                                     
                                     self.current_file_path.pop();
-                                    self.current_line += 1;
+                                    
                                     self.draw_output(String::from(" "));
                                     self.reset_cursor();
                                     self.current_line += 1;
                                     self.draw(app_data);
                                 
                                 },
+                                "load"=>{
+                                    for i in 1..components.len(){
+                                        if components[i] != " "{
+                                            let mut target_file = self.current_file_path.clone();
+                                            target_file.push(components[i]);
+                                            if target_file.exists() && target_file.is_file(){
+                                                return AppAction::LoadPage(target_file);
+                                            }else if target_file.is_dir() {
+                                                self.draw_output(String::from(target_file.to_str().unwrap().to_owned()+" is not a file"));
+                                                self.reset_cursor();
+                                                self.current_line += 1;
+                                                self.draw(app_data);
+                                            }else if target_file.exists() == false {
+                                                self.draw_output(String::from(target_file.to_str().unwrap().to_owned()+" does not exist"));
+                                                self.reset_cursor();
+                                                self.current_line += 1;
+                                                self.draw(app_data);
+                                            }
+
+
+                                            break;
+                                        }
+                                    }
+                                }
                                 _=>{
                                     //unknown command
                                     self.current_line += 1;

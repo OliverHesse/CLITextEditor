@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crossterm::event::Event;
 
 use crate::{app::{App, AppAction, AppData},display_libs};
@@ -5,7 +7,7 @@ use crate::{app::{App, AppAction, AppData},display_libs};
 pub struct PageData{
     pub page_name:String,
     pub is_static:bool,
-    pub file_path:String,
+    pub file_path:PathBuf,
     pub file_name:String,
     pub file_extension:String,
 
@@ -13,7 +15,7 @@ pub struct PageData{
 
 pub struct PageDisplayData{
     pub page_name:String,
-    pub file_path:String
+    pub file_path:PathBuf
 }
 
 pub enum PageError{
@@ -23,7 +25,17 @@ pub enum PageResult{
     Generic()
 }
 
+impl PageData{
+    pub fn get_page_display_details(&self)->PageDisplayData{
+        return PageDisplayData{
+            page_name:self.page_name.clone(),
+            file_path:self.file_path.clone()
+        };
+    }
+}
+
 pub trait PageCore{
+    fn get_page_name(&self)->String{String::new()}
     fn get_page_data(&self)->Option<PageData>{None}
     fn get_page_display_details(&self)->Option<PageDisplayData>{None}
     //logic to draw

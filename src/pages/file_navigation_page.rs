@@ -1,7 +1,7 @@
-use crossterm::{cursor::{Hide, MoveTo, Show}, event::{Event, KeyCode, KeyEventKind, KeyEventState}, style::Print, terminal::{Clear, ClearType}, QueueableCommand};
+use crossterm::{cursor::{Hide, MoveTo, Show}, event::{Event, KeyCode, KeyEventKind, KeyEventState}, style::Print, terminal::{self, Clear, ClearType}, QueueableCommand};
 
 use crate::{app::{self, App, AppAction, AppData}, page_libs::{PageCore, PageData}};
-use std::{env::{self, current_dir}, io::{self, Write}, path::PathBuf};
+use std::{env::{self, current_dir}, fs, io::{self, Write}, path::{Path, PathBuf}};
 pub struct FileNavigation{
     pub page_data:PageData,
   
@@ -19,29 +19,92 @@ impl FileNavigation{
         });
         return len_u16
     }
+    fn draw_output(&self,output:String){
+        let mut stdout = io::stdout();
+
+        if self.current_line >= terminal::size().unwrap().1-1{
+            stdout.queue(terminal::ScrollUp(1));
+        }
+        stdout.queue(Hide);
+        stdout.queue(MoveTo(0,self.current_line));
+        stdout.queue(Clear(ClearType::CurrentLine));
+        stdout.queue(Print(output.as_str()));
+        stdout.queue(MoveTo(self.current_column,self.current_line));
+        stdout.queue(Show);
+        
+    
+        stdout.flush();
+    }
+
+    fn reset_cursor(&mut self){
+        let curr_dir = &self.current_file_path;
+        let len_u16: u16 = curr_dir.to_str().unwrap().len().try_into().unwrap_or_else(|_| {
+            panic!("String is too long to fit into a u16");
+        
+        });
+        self.current_column =len_u16+1;
+    }
     fn path_len_usize(&self)->usize{
         let curr_dir = &self.current_file_path;
         let len_usize: usize = curr_dir.to_str().unwrap().len();
         return len_usize
+    }
+    fn normalize_path(&self,path: &str) -> PathBuf {
+        let path = Path::new(path);
+        let normalized = fs::canonicalize(path).expect("Failed to canonicalize path");
+
+        
+        let normalized_str = normalized.to_str().expect("Failed to convert path to string");
+        if normalized_str.starts_with(r"\\?\") {
+            let stripped = &normalized_str[4..]; 
+            Path::new(stripped).to_path_buf()  
+        } else {
+            normalized
+        }
+    }
+    fn edit_input_buffer(&mut self){
+        
+        let mut stdout = io::stdout();
+        if let Some(path) = self.current_file_path.to_str(){
+            let len_u16: u16 = path.len().try_into().unwrap_or_else(|_| {
+                panic!("String is too long to fit into a u16");
+
+            });
+            if self.current_line >= terminal::size().unwrap().1{
+                //stdout.queue(terminal::ScrollUp(1));
+            }
+            stdout.queue(Hide);
+            stdout.queue(MoveTo(0,self.current_line));
+            stdout.queue(Clear(ClearType::CurrentLine));
+            stdout.queue(Print(path.clone().to_owned()+">"+self.current_input_buffer.as_str()));
+            stdout.queue(MoveTo(self.current_column,self.current_line));
+            stdout.queue(Show);
+          
+        }else{
+            println!("path does not exist");
+        }
+        stdout.flush();
     }
 }
 impl PageCore for FileNavigation{
     fn get_page_data(&self)->Option<PageData> {
         return Some(self.page_data.clone());
     }
+
     fn initial_draw(&mut self,app_data:AppData) ->AppAction{
         
         if let Ok(current_dir) = env::current_dir() {
             // Get the root component (drive on Windows, / on Linux)
             if let Some(root) = current_dir.components().next() {
                 if let Some(root_str) = root.as_os_str().to_str() {
-                    println!("Current root component: {}", root_str);
+                    
                     let len_u16: u16 = root_str.len().try_into().unwrap_or_else(|_| {
                         panic!("String is too long to fit into a u16");
         
                     });
-                    self.current_column =len_u16+1;
-                    self.current_file_path.push(root_str);
+                    self.current_column =len_u16+1+1;
+                    let path_str = root_str.to_string()+r"\";
+                    self.current_file_path.push(path_str);
                     self.draw(app_data);
                 }
             }
@@ -63,13 +126,16 @@ impl PageCore for FileNavigation{
                 panic!("String is too long to fit into a u16");
 
             });
-            
+            if self.current_line >= terminal::size().unwrap().1{
+                stdout.queue(terminal::ScrollUp(1));
+            }    
             stdout.queue(Hide);
             stdout.queue(MoveTo(0,self.current_line));
             stdout.queue(Clear(ClearType::CurrentLine));
             stdout.queue(Print(path.clone().to_owned()+">"+self.current_input_buffer.as_str()));
             stdout.queue(MoveTo(self.current_column,self.current_line));
             stdout.queue(Show);
+       
         }else{
             println!("path does not exist");
         }
@@ -88,14 +154,14 @@ impl PageCore for FileNavigation{
                         });
                         if e.kind == KeyEventKind::Press && self.current_column > self.path_len_u16()+1{
                             self.current_column -= 1;
-                            self.draw(app_data);
+                            self.edit_input_buffer();
                         }
                     },
                     KeyCode::Right=>{
                        
                         if e.kind == KeyEventKind::Press && usize::from(self.current_column) <= self.current_input_buffer.len()+self.path_len_usize(){
                             self.current_column += 1;
-                            self.draw(app_data);
+                            self.edit_input_buffer();
                         }
                     },
                     KeyCode::Char(ch)=>{
@@ -105,7 +171,7 @@ impl PageCore for FileNavigation{
                             self.current_input_buffer.insert(usize::from(self.current_column-self.path_len_u16()-1), ch);
                             //self.current_input_buffer.push(ch);
                             self.current_column+=1;
-                            self.draw(app_data);
+                            self.edit_input_buffer();
                     }
                     },
                     KeyCode::Backspace=>{
@@ -116,14 +182,96 @@ impl PageCore for FileNavigation{
                                 if index_to_remove >= 0 && self.current_input_buffer.len() != 0 {
                                     self.current_input_buffer.remove(usize::from(self.current_column-self.path_len_u16()-2));
                                     self.current_column -= 1;
-                                    self.draw(app_data)
+                                    self.edit_input_buffer()
                                 }
                             }
                             
                        
                         }
                     },
-                    KeyCode::Enter=>{},
+                    KeyCode::Enter=>{
+                        if e.kind == KeyEventKind::Press{
+                            if self.current_input_buffer.is_empty(){
+                                self.current_line += 1;
+                                self.draw(app_data);
+                                return AppAction::Nothing
+                            }
+                            let input_string = self.current_input_buffer.clone();
+                            self.current_input_buffer.clear();
+    
+                            let components:Vec<&str> = input_string.split(" ").collect();
+    
+                            match components[0]{
+                                "cd"=>{
+                                    for i in 1..components.len(){
+                                        if components[i] != " "{
+                                            //try new path
+                                            let mut temp_path:PathBuf = self.current_file_path.clone();
+                                            temp_path.push(components[i]);
+                                            if temp_path.exists() && temp_path.is_dir(){
+                                                self.current_file_path.push(components[i]);
+                                                self.current_file_path = self.normalize_path(self.current_file_path.to_str().unwrap());
+                                                self.current_line += 1;
+                                                self.draw_output(String::from(" "));
+                                                self.reset_cursor();
+                                                self.current_line += 1;
+                                                self.draw(app_data);
+                                            }else{
+                                                self.current_line += 1;
+                                                self.draw_output(String::from("folder ".to_owned()+temp_path.to_str().unwrap()+"  does not exist"));
+                                                self.reset_cursor();
+                                                self.current_line += 1;
+                                                self.draw(app_data);
+                                            }
+                                            
+                                            break;
+                                        }
+                                    }
+                                },
+                                "ls"=>{
+                                    let paths = fs::read_dir(self.current_file_path.as_path()).unwrap();
+
+                                    for path in paths {
+                                        self.current_line+=1;
+                                        let full_path = path.unwrap().path();
+
+                                    
+                                        let relative_path = full_path.strip_prefix(&self.current_file_path)
+                                            .unwrap_or_else(|_| &full_path)  
+                                            .to_path_buf();
+                                
+                                        self.draw_output(format!("{}", relative_path.display()));
+                                       
+                                    }
+                                    self.reset_cursor();
+                                    self.current_line += 1;
+                                    self.draw(app_data);
+                                },
+                                "cd.."=>{
+                                    
+                                    self.current_file_path.pop();
+                                    self.current_line += 1;
+                                    self.draw_output(String::from(" "));
+                                    self.reset_cursor();
+                                    self.current_line += 1;
+                                    self.draw(app_data);
+                                
+                                },
+                                _=>{
+                                    //unknown command
+                                    self.current_line += 1;
+                                    self.draw_output(String::from("error command ".to_owned()+components[0] +" not recognized"));
+                                    self.reset_cursor();
+                                    self.current_line += 1;
+                                    self.draw(app_data);
+                                }
+                            }
+                        }
+                 
+
+
+
+                    },
                     _=>{}
                 }
             },

@@ -33,7 +33,8 @@ fn main_loop()->io::Result<()>{
             is_static:false,
             file_path:PathBuf::new(),
             file_extension:String::new(),
-            file_name:String::new()
+            file_name:String::new(),
+            is_fixed:true,
         }
     };
     let mut set_page = Settings{
@@ -42,16 +43,18 @@ fn main_loop()->io::Result<()>{
             is_static:true,
             file_path:PathBuf::new(),
             file_extension:String::new(),
-            file_name:String::new()
+            file_name:String::new(),
+            is_fixed:true,
         }
     };
     let mut view_loaded = ViewLoadedPages{
         page_data: PageData{
             page_name:String::from("view_loaded"),
-            is_static:true,
+            is_static:false,
             file_path:PathBuf::new(),
             file_extension:String::new(),
-            file_name:String::new()
+            file_name:String::new(),
+            is_fixed:true,
         },
         current_line :0,
         text:Vec::new(),
@@ -68,7 +71,7 @@ fn main_loop()->io::Result<()>{
         let result = root_app.run(read()?);
         match result{
             Ok(())=>(),
-            Err(data)=>println!("ther was an error")
+            Err(data)=>println!("there was an error from the app")
         }
     }
 }

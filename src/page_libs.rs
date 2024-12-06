@@ -10,7 +10,7 @@ pub struct PageData{
     pub file_path:PathBuf,
     pub file_name:String,
     pub file_extension:String,
-
+    pub is_fixed:bool,
 }
 
 pub struct PageDisplayData{

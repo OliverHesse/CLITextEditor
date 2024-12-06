@@ -173,14 +173,17 @@ impl App{
                             
                             
                             let components:Vec<&str> = self.input_buffer.split(" ").collect();
+
                             match components[0]{
                                 "select"=>{
                                     match self.find_page_from_name("view_loaded".to_string()){
                                         Ok(i)=>{
+                                            println!("NOT HERE");
                                             let _ =self.change_page(i);
                                             self.pages[self.active_page].initial_draw(app_data);   
                                             self.current_column = 0;
-                                            self.input_buffer.clear();   
+                                            self.input_buffer.clear();  
+                                             
                                             return Ok(());                                 
                                         },
                                         Err(page_error)=>return Err(page_error),
@@ -200,7 +203,11 @@ impl App{
                                     }
                                     
                                 }
-                                _=>{self.pages[self.active_page].draw(app_data);},
+                                _=>{ 
+                                        self.current_column = 0;
+                                        self.input_buffer.clear();
+                                        self.pages[self.active_page].draw(app_data);
+                                    },
                             }
                             
                             
@@ -278,7 +285,8 @@ impl App{
                                 is_static:true,
                                 file_path:page_path.clone(),
                                 file_extension:file_extension.to_owned(),
-                                file_name:file_name.to_string()
+                                file_name:file_name.to_string(),
+                                is_fixed:true,
                             }
                         };
                         self.add_page(Box::new(txt_page));

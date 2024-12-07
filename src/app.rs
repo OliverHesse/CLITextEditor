@@ -4,6 +4,7 @@ use crossterm::{cursor::{DisableBlinking, Hide, MoveTo, Show}, event::{Event, Ke
 
 use crate::{page_libs::{PageCore, PageData, PageError}, pages::{file_navigation_page::{self, FileNavigation}, text_file_page::TextFilePage}};
 
+#[derive(Clone,Debug)]
 
 pub struct AppData{
     pub pages_data:Vec<PageData>,
@@ -245,14 +246,15 @@ impl App{
                         }
                     },
                     KeyCode::Backspace=>{
-                        if event.kind == KeyEventKind::Press{
+                        if event.kind == KeyEventKind::Press &&  self.mode == AppMode::Command{
                             
-                            let index_to_remove =usize::from(self.current_column);
-                            if index_to_remove >= 0 && self.input_buffer.len() != 0 {
-                                self.input_buffer.remove(usize::from(self.current_column));
+                            let index_to_remove = usize::from(self.current_column);
+                            if index_to_remove > 0 && self.input_buffer.len() != 0 {
+                                self.input_buffer.remove(index_to_remove-1);
                                 self.current_column -= 1;
                                 self.edit_input_buffer();
                             }
+                            
                             
                        
                         }
@@ -266,8 +268,11 @@ impl App{
             return Ok(());
         }
         //detect all my predetermined behavior then run
-        match self.pages[self.active_page].run(iter_event,app_data){
-            AppAction::ChangePage(page_num)=>{},
+        match self.pages[self.active_page].run(iter_event,app_data.clone()){
+            AppAction::ChangePage(page_num)=>{
+                let _ =self.change_page(page_num);
+                self.pages[self.active_page].initial_draw(app_data);
+            },
             AppAction::ClosePage(page_num)=>{},
             AppAction::LoadPage(page_path)=>{
                 let mut file = page_path.file_name().unwrap().to_str().unwrap();
@@ -287,7 +292,10 @@ impl App{
                                 file_extension:file_extension.to_owned(),
                                 file_name:file_name.to_string(),
                                 is_fixed:true,
-                            }
+                            },
+                            text:Vec::new(),
+                            current_line:0,
+                            current_row:0
                         };
                         self.add_page(Box::new(txt_page));
                     },

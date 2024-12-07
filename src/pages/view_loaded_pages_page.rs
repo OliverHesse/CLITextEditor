@@ -34,6 +34,7 @@ impl ViewLoadedPages{
     pub fn hover_current_line(&self){
         let mut stdout = io::stdout();
         let (cols, rows) = terminal::size().unwrap();
+
         stdout.queue(Hide);
         stdout.queue(MoveTo(0,self.current_line));
         stdout.queue(Clear(ClearType::CurrentLine));
@@ -62,6 +63,7 @@ impl PageCore for ViewLoadedPages{
         let mut stdout = io::stdout();
         let mut current_line:u16 = 0;
         let all_pages =app_data.pages_data;
+        self.text.clear();
         stdout.queue(Hide);
         stdout.queue(MoveTo(0,0));
         for n in all_pages{
@@ -91,6 +93,7 @@ impl PageCore for ViewLoadedPages{
         stdout.flush();
         
         self.hover_current_line();
+       
         AppAction::Nothing
     }
     fn run(&mut self,iter_event:Event,app_data:AppData)->AppAction {
@@ -116,7 +119,14 @@ impl PageCore for ViewLoadedPages{
                         } 
                     },
                     KeyCode::Backspace=>{},
-                    KeyCode::Enter=>{},
+                    KeyCode::Enter=>{
+                        //select page
+                        if e.kind == KeyEventKind::Press{
+                            
+                            self.reset_line(self.current_line as usize);
+                            return AppAction::ChangePage(self.current_line as usize);
+                        }
+                    },
                     _=>{}
                 }
             }

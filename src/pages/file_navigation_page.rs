@@ -126,10 +126,8 @@ impl PageCore for FileNavigation{
         AppAction::Nothing
         
     }
-    fn draw(&self,app_data:AppData){
-        //TODO left and right arrow key movement
-        //TODO del
-        //TODO undo-redo
+    fn draw(&self,app_data:AppData)->AppAction{
+        //TODO FIX buggy when going past size of terminal
         //TODO allow for paste
         //TODO enter
         let mut stdout = io::stdout();
@@ -139,7 +137,7 @@ impl PageCore for FileNavigation{
 
             });
             if self.current_line >= terminal::size().unwrap().1{
-                stdout.queue(terminal::ScrollUp(1));
+                stdout.queue(terminal::ScrollDown(1));
             }    
             stdout.queue(Hide);
             stdout.queue(MoveTo(0,self.current_line));
@@ -152,12 +150,14 @@ impl PageCore for FileNavigation{
             println!("path does not exist");
         }
         stdout.flush();
+        return AppAction::Nothing;
        
     }
     fn run(&mut self,iter_event:crossterm::event::Event,app_data:AppData)->AppAction{
         match iter_event{
             Event::Key(e)=>{
                 match e.code{
+                    
                     KeyCode::Left=>{
                         if e.kind == KeyEventKind::Press && self.current_column > self.path_len_u16()+1{
                             self.current_column -= 1;

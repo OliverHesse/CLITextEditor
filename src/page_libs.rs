@@ -39,7 +39,7 @@ pub trait PageCore{
     fn get_page_data(&self)->Option<PageData>{None}
     fn get_page_display_details(&self)->Option<PageDisplayData>{None}
     //logic to draw
-    fn draw(&self,app_data:AppData){}
+    fn draw(&self,app_data:AppData)->AppAction{AppAction::Nothing}
     //might want different behavior for initial draw
     fn initial_draw(&mut self,app_data:AppData)->AppAction{AppAction::Nothing}
     //run every iteration

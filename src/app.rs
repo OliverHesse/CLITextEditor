@@ -295,7 +295,8 @@ impl App{
                             },
                             text:Vec::new(),
                             current_line:0,
-                            current_row:0
+                            current_column:0,
+                            line_offset:0
                         };
                         self.add_page(Box::new(txt_page));
                     },
